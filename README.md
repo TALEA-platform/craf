@@ -31,18 +31,17 @@ Methodological reference:
 craf/
 │
 ├── notebooks/                      # Jupyter notebooks for each analytical step
-│   ├── 01_LST_processing.ipynb
-│   ├── 02_zonal_stats.ipynb
-│   ├── 03_fragility_index.ipynb
-│   ├── Accessibility.ipynb
-│   ├── new_CSI.ipynb
-│   ├── Climatic_fragility.ipynb
-│   ├── Fragility.ipynb
+│   ├── 01_clip_gdal.ipynb 
+│   ├── 02_resampling.ipynb  
+│   ├── 03_hot_and_cold_spot.ipynb  
+│   ├── 04_NDVI_for_CSI.ipynb  
+│   ├── 05_bus_stop.ipynb  
+│   ├── 06_disabled_parking.ipynb 
+│   ├── 07_accessibility.ipynb  
 │   └── ...
 │
 ├── data/                        # Input and processed datasets
 │   ├── Climatic_fragility/
-│   ├── Meteoblue/
 │   └── ...
 │
 ├── docs/                        # web mapping
@@ -75,18 +74,19 @@ Each step integrates a thematic dataset, leading to the final climatic fragility
 ### 📘 Processing Chain
 
 ```
-Clip/Resample → Hot_and_Cold_Spot
+Clip/Resample → 03_hot_and_cold_spot.ipynb
            ↓
-NDVI computation → NDVI_for_CSI
+NDVI computation → 04_NDVI_for_CSI.ipynb
            ↓
-Accessibility + Structures → Identify_structures_for_CSI
+Accessibility + Structures → 08_identify_structures_for_CSI.ipynb
            ↓
-Combine indicators → new_CSI.ipynb
+Combine indicators → 09_new_CSI.ipynb
            ↓
-Integrate all components → Climatic_fragility.ipynb
+Integrate all components → 10_climatic_fragility.ipynb
            ↓
-Final index → Fragility.ipynb
+Final index → 11_fragility.ipynb
 ```
+
 
 ### 📔 Notebook Execution Order
 
@@ -188,7 +188,27 @@ Riferimento metodologico:
 
 ## 📁 Struttura del Repository
 
-(Identica alla sezione inglese)
+```
+craf/
+│
+├── notebooks/                      # Jupyter notebooks for each analytical step
+│   ├── 01_clip_gdal.ipynb 
+│   ├── 02_resampling.ipynb  
+│   ├── 03_hot_and_cold_spot.ipynb  
+│   ├── 04_NDVI_for_CSI.ipynb  
+│   ├── 05_bus_stop.ipynb  
+│   ├── 06_disabled_parking.ipynb 
+│   ├── 07_accessibility.ipynb  
+│   └── ...
+│
+├── data/                        # Input and processed datasets
+│   ├── Climatic_fragility/
+│   └── ...
+│
+├── docs/                        # web mapping
+├── requirements.txt             # Python dependencies
+└── README.md
+```
 
 ---
 
@@ -201,13 +221,47 @@ Riferimento metodologico:
 | **Topografia** | Copernicus DEM | Morfologia e pendenza |
 | **Socio-ambientali** | ISTAT, Climate Shelter Index | Sensibilità e capacità adattiva |
 | **Amministrative** | Aree statistiche Comune di Bologna | Unità di analisi |
-| **Meteorologiche** | Meteoblue, ERA5 | Validazione dei pattern termici |
+| **Meteorologiche** | ERA5 | Validazione dei pattern termici |
+
+File raster e vector molto grandi sono disponibili su altre sorgenti
 
 ---
 
-## 🧮 Workflow
+## 🧮 Flusso di lavoro
 
-La pipeline si sviluppa attraverso una sequenza di notebook dedicati a singoli set di dati tematici.
+La pipeline si sviluppa attraverso una sequenza di notebook dedicati a singoli set di dati tematici.<Br/>
+Ogni fase integra un set di dati tematici, che porta al risultato finale sulla fragilità climatica.
+
+
+### 📘 Catena di esecuzione
+
+```
+Clip/Resample → 03_hot_and_cold_spot.ipynb
+           ↓
+NDVI computation → 04_NDVI_for_CSI.ipynb
+           ↓
+Accessibility + Structures → 08_identify_structures_for_CSI.ipynb
+           ↓
+Combine indicators → 09_new_CSI.ipynb
+           ↓
+Integrate all components → 10_climatic_fragility.ipynb
+           ↓
+Final index → 11_fragility.ipynb
+```
+
+### 📔 ordine di esecuzione dei notebook
+
+1. 01_clip_gdal.ipynb  
+2. 02_resampling.ipynb  
+3. 03_hot_and_cold_spot.ipynb  
+4. 04_NDVI_for_CSI.ipynb  
+5. 05_bus_stop.ipynb  
+6. 06_disabled_parking.ipynb  
+7. 07_accessibility.ipynb  
+8. 08_identify_structures_for_CSI.ipynb  
+9. 09_new_CSI.ipynb  
+10. 10_climatic_fragility.ipynb  
+11. 11_fragility.ipynb  
 
 ---
 
