@@ -1,4 +1,4 @@
-# 🌿 Climatic Fragility and Resilience Analysis (CRAF)
+# 🌿 Climatic Resilinece and Fragility Analysis (CRAF)
 
 [🇮🇹 Versione in italiano qui](#versione-italiana)
 
