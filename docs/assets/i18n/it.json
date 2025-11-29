@@ -1,0 +1,81 @@
+{
+  "topbarTitle": "TALEA · Systemic Urban Observation Atlas",
+  "topbarSubtitle": "Climate shelters & fragility · Caso Bologna",
+  "topbarRight": "Digital Commons Lab · FBK",
+
+  "heroTitle": "Rifugi climatici & fragilità urbana",
+  "heroParagraph": "Bologna come laboratorio per capire cosa rende efficace un rifugio climatico, come si intreccia con la fragilità urbana e come TALEA può guidare le scelte di pianificazione.",
+  "heroTagline": "Dal verde generico ai climate shelters: dati, mappe e storie per il SUOA.",
+
+  "heroCard1Label": "Spazi verdi analizzati",
+  "heroCard1Small": "aree verdi pubbliche considerate nel modello CSI",
+  "heroCard2Label": "Candidati rifugi climatici",
+  "heroCard2Small": "superficie > 0.5 ha e NDVI > 0.4",
+  "heroCard3Label": "Range osservato CFI",
+  "heroCard3Small": "fragilità climatica normalizzata per area statistica",
+
+  "tabCSI": "Rifugi climatici (CSI)",
+  "tabCFI": "Fragilità & accesso ai rifugi",
+
+  "csiSectionTitle": "Dove sono e come funzionano i rifugi climatici",
+  "csiSectionSubtitle": "Non tutti i parchi sono rifugi climatici: qui vediamo qualità (CSI), dotazioni e accessibilità dei green spaces bolognesi.",
+
+  "chipAll": "Tutti",
+  "chipVeryLow": "CSI molto basso",
+  "chipLow": "CSI basso",
+  "chipMedium": "CSI medio",
+  "chipHigh": "CSI alto",
+  "chipVeryHigh": "CSI molto alto",
+
+  "csiHint": "Suggerimento: usa i filtri per concentrarti sui parchi con migliore capacità di offrire sollievo (CSI alto/molto alto).",
+
+  "csiHistTitle": "Distribuzione del Climate Shelter Index (CSI)",
+  "csiHistHint": "Quanti parchi hanno davvero un CSI elevato? L’istogramma mostra quante aree verdi rientrano in ciascuna classe di qualità climatica.",
+
+  "amenitiesTitle": "Dotazioni dei rifugi",
+  "amenitiesHint": "Fontane, panchine e tavoli sono elementi essenziali di un rifugio climatico: qui vedi in quanti parchi sono presenti.",
+
+  "cfiSectionTitle": "Fragilità climatica e sociale per quartiere",
+  "cfiSectionSubtitle": "Le aree più fragili combinano esposizione al calore, scarsa presenza di rifugi climatici e vulnerabilità socio-economica. Qui vediamo come questi fattori si intrecciano nello spazio urbano.",
+
+  "cfiHint": "Passa il mouse sulle aree statistiche per leggere CFI (fragilità climatica), F complessivo e HF. La mappa evidenzia le zone a priorità maggiore.",
+
+  "cfiVsCsiTitle": "CFI vs qualità dei rifugi (CSI medio)",
+  "cfiVsCsiHint": "Ogni punto è un’area statistica: in alto a sinistra trovi le zone con alta fragilità climatica e rifugi di bassa qualità — i candidati naturali per interventi TALEA.",
+
+  "fragilityClassTitle": "Classi di fragilità complessiva (F)",
+  "fragilityClassHint": "La distribuzione per classi mostra quanto la fragilità climatica contribuisce a spostare i quartieri verso livelli di rischio più elevati.",
+
+  "csiHistLabels": [
+    "Molto basso",
+    "Basso",
+    "Medio",
+    "Alto",
+    "Molto alto"
+  ],
+
+  "amenitiesLabels":  ["Verde (%)","Blu (%)","Hot area (%)","Cold area (%)"],
+  "amenitiesDatasetLabel": "Valori medi percentuali per area",
+
+  "fragilityClassLabels": [
+    "Molto bassa",
+    "Bassa",
+    "Moderata",
+    "Alta",
+    "Molto alta"
+  ],
+
+  "cfiVsCsiLabelX": "CFI (fragilità climatica)",
+  "cfiVsCsiLabelY": "CSI medio dei parchi",
+
+  "popupPark": "Parco",
+  "popupCSI": "CSI",
+  "popupNDVI": "NDVI",
+  "popupFountains": "Fontane",
+  "popupBenches": "Panchine",
+  "popupTables": "Tavoli",
+  "popupAreaStat": "Area statistica",
+  "popupF": "F",
+  "popupHF": "HF"
+}
+

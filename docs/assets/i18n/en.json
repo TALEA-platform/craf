@@ -1,0 +1,80 @@
+{
+  "topbarTitle": "TALEA · Systemic Urban Observation Atlas",
+  "topbarSubtitle": "Climate shelters & fragility · Bologna case",
+  "topbarRight": "Digital Commons Lab · FBK",
+
+  "heroTitle": "Climate shelters & urban fragility",
+  "heroParagraph": "Bologna as a living lab to understand what makes a climate shelter effective, how it intersects with urban fragility, and how TALEA can guide planning decisions.",
+  "heroTagline": "From generic green space to climate shelters: data, maps and stories for the SUOA.",
+
+  "heroCard1Label": "Green spaces analysed",
+  "heroCard1Small": "public green areas included in the CSI model",
+  "heroCard2Label": "Candidate climate shelters",
+  "heroCard2Small": "area > 0.5 ha and NDVI > 0.4",
+  "heroCard3Label": "Observed CFI range",
+  "heroCard3Small": "normalised climatic fragility per statistical area",
+
+  "tabCSI": "Climate shelters (CSI)",
+  "tabCFI": "Fragility & access to shelters",
+
+  "csiSectionTitle": "Where climate shelters are and how they perform",
+  "csiSectionSubtitle": "Not every park is a climate shelter: here we look at quality (CSI), amenities and accessibility of Bologna's green spaces.",
+
+  "chipAll": "All",
+  "chipVeryLow": "Very low CSI",
+  "chipLow": "Low CSI",
+  "chipMedium": "Medium CSI",
+  "chipHigh": "High CSI",
+  "chipVeryHigh": "Very high CSI",
+
+  "csiHint": "Tip: use the filters to focus on parks with the highest capacity to offer relief (high / very high CSI).",
+
+  "csiHistTitle": "Distribution of the Climate Shelter Index (CSI)",
+  "csiHistHint": "How many parks actually have a high CSI? The histogram shows how many green areas fall into each quality class.",
+
+  "amenitiesTitle": "Shelter amenities",
+  "amenitiesHint": "Fountains, benches and tables are core elements of a climate shelter: here you can see in how many parks they are present.",
+
+  "cfiSectionTitle": "Climatic and social fragility by district",
+  "cfiSectionSubtitle": "The most fragile areas combine heat exposure, poor access to climate shelters and socio-economic vulnerability. Here we see how these factors converge in urban space.",
+
+  "cfiHint": "Hover statistical areas to read CFI (climatic fragility), overall F and HF. The map highlights high-priority zones.",
+
+  "cfiVsCsiTitle": "CFI vs shelter quality (average CSI)",
+  "cfiVsCsiHint": "Each dot is a statistical area: top-left you find places with high climatic fragility and low shelter quality — natural candidates for TALEA interventions.",
+
+  "fragilityClassTitle": "Overall fragility classes (F)",
+  "fragilityClassHint": "The class distribution shows how climatic fragility pushes districts towards higher levels of overall risk.",
+
+  "csiHistLabels": [
+    "Very low",
+    "Low",
+    "Medium",
+    "High",
+    "Very high"
+  ],
+
+ "amenitiesLabels":  ["Green (%)","Blue (%)","Hot area (%)","Cold area (%)"],
+  "amenitiesDatasetLabel": "Average % per area",
+
+  "fragilityClassLabels": [
+    "Very low",
+    "Low",
+    "Moderate",
+    "High",
+    "Very high"
+  ],
+
+  "cfiVsCsiLabelX": "CFI (climatic fragility)",
+  "cfiVsCsiLabelY": "Average CSI of parks",
+
+  "popupPark": "Park",
+  "popupCSI": "CSI",
+  "popupNDVI": "NDVI",
+  "popupFountains": "Fountains",
+  "popupBenches": "Benches",
+  "popupTables": "Tables",
+  "popupAreaStat": "Statistical area",
+  "popupF": "F",
+  "popupHF": "HF"
+}
