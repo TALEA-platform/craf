@@ -1,386 +1,1280 @@
-<script>
-/* =========================================================
-   1. CARICAMENTO MULTILINGUA DA FILE JSON ESTERNI
-   ========================================================= */
+<!DOCTYPE html>
+<html lang="it">
 
-let I18N = { it: null, en: null };
-let currentLang = "it";
+<head>
+  <meta charset="UTF-8" />
+  <title>Rifugi climatici & fragilità urbana – TALEA / SUOA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-async function loadI18n() {
-  const [itResp, enResp] = await Promise.all([
-    fetch("assets/i18n/it.json"),
-    fetch("assets/i18n/en.json")
-  ]);
-  I18N.it = await itResp.json();
-  I18N.en = await enResp.json();
-}
+  <!-- MapLibre -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
 
-function applyI18n() {
-  const t = I18N[currentLang];
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const key = el.getAttribute("data-i18n");
-    if (t[key] !== undefined) {
-      el.textContent = t[key];
+  <!-- jQuery + DataTables -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      /* Palette TALEA semplificata: verde + giallo, testo quasi nero */
+      --talea-green: #0b7a4b;
+      --talea-blue: #0b7a4b;
+      --talea-yellow: #ffcc33;
+      --bg-light: #f5f7fb;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --card-radius: 14px;
+      --shadow-soft: 0 2px 6px rgba(15, 23, 42, 0.08);
     }
-  });
-}
 
-function updateLanguageButtons() {
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.classList.remove("active");
-  });
-  document
-    .querySelector(`.lang-btn[data-lang='${currentLang}']`)
-    .classList.add("active");
-}
+    * {
+      box-sizing: border-box;
+    }
 
-/* =========================================================
-   2. CONFIG PERCORSI GEOJSON
-   ========================================================= */
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-light);
+      color: var(--text-main);
+    }
 
-const CSI_GEOJSON_URL =
-  "data/Climatic_fragility/outputs/green_spaces_csi.geojson";
-const CFI_GEOJSON_URL =
-  "data/Climatic_fragility/outputs/fragility_areas.geojson";
+    /* Topbar stile SUOA */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 1.5rem;
+      background: #ffffff;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
 
-/* =========================================================
-   3. VARIABILI GLOBALI MAPPE + GRAFICI
-   ========================================================= */
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
 
-let csiData = null;
-let cfiData = null;
-let mapCSI, mapCFI;
-let csiHistChart, amenitiesChart, cfiVsCsiChart, fragilityClassChart;
+    .logo-pill {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #ffffff 0, #ffffff 20%, var(--talea-green) 75%);
+      border: 2px solid var(--talea-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #ffffff;
+      font-size: 0.9rem;
+    }
 
-/* =========================================================
-   4. CLASSIFICAZIONE VALORI
-   ========================================================= */
+    .topbar-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
 
-function classifyCSI(csi) {
-  if (csi < 0.2) return "very_low";
-  if (csi < 0.4) return "low";
-  if (csi < 0.6) return "medium";
-  if (csi < 0.8) return "high";
-  return "very_high";
-}
+    .topbar-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
 
-function classifyFragility(value) {
-  if (value <= 0.25) return "very_low";
-  if (value <= 0.45) return "low";
-  if (value <= 0.6) return "moderate";
-  if (value <= 0.75) return "high";
-  return "very_high";
-}
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
 
-/* =========================================================
-   5. MAPPA CSI
-   ========================================================= */
+    .lang-btn {
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: #ffffff;
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--text-muted);
+    }
 
-function initMapCSI() {
-  mapCSI = new maplibregl.Map({
-    container: "map-csi",
-    style: "https://demotiles.maplibre.org/style.json",
-    center: [11.34, 44.5],
-    zoom: 11.8,
-  });
+    .lang-btn.active {
+      background: var(--talea-green);
+      color: #ffffff;
+      border-color: var(--talea-green);
+    }
 
-  mapCSI.addControl(new maplibregl.NavigationControl(), "top-right");
+    header.hero {
+      padding: 1.5rem 1.5rem 0.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
-  mapCSI.on("load", () => {
-    mapCSI.addSource("csi-parks", {
-      type: "geojson",
-      data: csiData,
-    });
+    header.hero h1 {
+      margin: 0;
+      font-size: 1.55rem;
+      color: var(--talea-green);
+    }
 
-    mapCSI.addLayer({
-      id: "csi-parks-layer",
-      type: "circle",
-      source: "csi-parks",
-      paint: {
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["get", "area_ha"],
-          0.5, 4,
-          5, 12,
-        ],
-        "circle-color": [
-          "interpolate",
-          ["linear"],
-          ["get", "csi"],
-          0, "#e5e7eb",
-          0.2, "#c7f2d2",
-          0.4, "#7dd3a5",
-          0.6, "#22c55e",
-          0.8, "#15803d",
-        ],
-        "circle-opacity": 0.9,
-        "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 1,
-      },
-    });
+    header.hero p {
+      margin: 0.4rem 0 0.2rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 820px;
+    }
 
-    const popup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-    });
+    .hero-tagline {
+      font-size: 0.85rem;
+      color: var(--talea-green);
+      margin-top: 0.4rem;
+    }
 
-    mapCSI.on("mousemove", "csi-parks-layer", (e) => {
-      const f = e.features[0];
-      const p = f.properties;
+    main.container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem 2rem;
+    }
+
+    /* Hero cards con numeri chiave */
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero-card {
+      background: #ffffff;
+      border-radius: var(--card-radius);
+      padding: 0.9rem 1rem;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 2px solid transparent;
+      border-image: linear-gradient(135deg,
+          rgba(11, 122, 75, 0.2),
+          rgba(0, 134, 201, 0.0),
+          rgba(255, 204, 51, 0.4)) 1;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .hero-card span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .hero-card h2 {
+      margin: 0.25rem 0;
+      font-size: 1.7rem;
+      color: var(--talea-green);
+    }
+
+    .hero-card small {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Tabs CSI / Fragilità */
+    .tabs {
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 0.15rem;
+      background: #e5edf9;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      padding: 0.35rem 0.95rem;
+      font-size: 0.85rem;
+      border-radius: 999px;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .tab-btn span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.25);
+    }
+
+    .tab-btn.active {
+      background: #ffffff;
+      color: var(--talea-green);
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+    }
+
+    .tab-btn.active span.dot {
+      background: var(--talea-green);
+    }
+
+    .section-title {
+      margin: 1.5rem 0 0.2rem;
+      font-size: 1.25rem;
+      color: var(--talea-green);
+    }
+
+    .section-subtitle {
+      margin: 0 0 0.8rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .two-columns {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr;
+      gap: 1rem;
+      align-items: stretch;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: var(--card-radius);
+      padding: 1rem;
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      height: 100%;
+    }
+
+    #map-csi,
+    #map-cfi,
+    #map-csi-parks {
+      width: 100%;
+      height: 420px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    canvas {
+      max-width: 100%;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .chip {
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 0.8rem;
+      cursor: pointer;
+      background: #f9fafb;
+      color: var(--text-muted);
+    }
+
+    .chip.active {
+      background: var(--talea-green);
+      color: #ffffff;
+      border-color: var(--talea-green);
+    }
+
+    .card h3 {
+      margin: 0;
+      font-size: 0.95rem;
+      color: var(--talea-green);
+    }
+
+    .card hr {
+      border: none;
+      border-top: 1px solid rgba(148, 163, 184, 0.35);
+      margin: 0.8rem 0;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Toolbar mappe locali */
+    .map-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 0.3rem;
+      gap: 0.35rem;
+    }
+
+    .map-toggle-btn {
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: #ffffff;
+      color: var(--text-muted);
+      border-radius: 999px;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.7rem;
+      cursor: pointer;
+    }
+
+    .map-toggle-btn.off {
+      background: #e5e7eb;
+      color: #4b5563;
+    }
+
+    .compare-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin: 0.5rem 0 0.5rem;
+    }
+
+    /* Fullscreen overlay per confronto CSI/CFI */
+    .fullscreen-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.75);
+      display: none;
+      align-items: stretch;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .fullscreen-overlay.active {
+      display: flex;
+    }
+
+    .fullscreen-panel {
+      background: #0b1120;
+      flex: 1;
+      max-width: 1200px;
+      margin: 1rem;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .fullscreen-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.9rem;
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 0.9rem;
+    }
+
+    .fullscreen-title {
+      font-weight: 500;
+    }
+
+    .fullscreen-close {
+      border: none;
+      background: transparent;
+      color: #e5e7eb;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .compare-slider-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.9rem;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+
+    .compare-slider-wrapper input[type="range"] {
+      flex: 1;
+    }
+
+    #map-compare {
+      flex: 1;
+      min-height: 380px;
+    }
+
+    .fullscreen-footer {
+      padding: 0.4rem 0.9rem;
+      background: #020617;
+      color: #9ca3af;
+      font-size: 0.75rem;
+    }
+
+    /* DataTables piccoli e puliti */
+    table.dataTable {
+      font-size: 0.8rem;
+      width: 100%;
+    }
+
+    table.dataTable thead th {
+      font-weight: 600;
+      color: var(--talea-green);
+    }
+
+    table.dataTable tbody tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+
+    @media (max-width: 900px) {
+
+      header.hero,
+      main.container {
+        padding: 0.75rem 1rem 1.5rem;
+      }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .two-columns {
+        grid-template-columns: 1fr;
+      }
+
+      #map-csi,
+      #map-cfi,
+      #map-csi-parks {
+        height: 320px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="logo-pill">TA</div>
+      <div>
+        <div class="topbar-title" data-i18n="topbarTitle">
+          TALEA · Systemic Urban Observation Atlas
+        </div>
+        <div class="topbar-subtitle" data-i18n="topbarSubtitle">
+          Climate shelters & fragility · Caso Bologna
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span data-i18n="topbarRight">Digital Commons Lab · FBK</span>
+      <button class="lang-btn active" data-lang="it">🇮🇹 IT</button>
+      <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <h1 data-i18n="heroTitle">Rifugi climatici & fragilità urbana</h1>
+    <p data-i18n="heroParagraph">
+      Bologna come laboratorio per capire cosa rende efficace un rifugio climatico, come si intreccia con la fragilità urbana e come TALEA può guidare le scelte di pianificazione.
+    </p>
+    <div class="hero-tagline" data-i18n="heroTagline">
+      Dal verde generico ai climate shelters: dati, mappe e storie per il SUOA.
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- NUMERI CHIAVE -->
+    <section>
+      <div class="hero-grid">
+        <div class="hero-card">
+          <span data-i18n="heroCard1Label">Spazi verdi analizzati</span>
+          <h2 id="stat-total-parks">–</h2>
+          <small data-i18n="heroCard1Small">
+            aree verdi pubbliche considerate nel modello CSI
+          </small>
+        </div>
+        <div class="hero-card">
+          <span data-i18n="heroCard2Label">Candidati rifugi climatici</span>
+          <h2 id="stat-csi-eligible">–</h2>
+          <small data-i18n="heroCard2Small">
+            superficie &gt; 0.5 ha e NDVI &gt; 0.4 (proxy: CS &gt; 0)
+          </small>
+        </div>
+        <div class="hero-card">
+          <span data-i18n="heroCard3Label">Range osservato CFI</span>
+          <h2>0.18 – 0.81</h2>
+          <small data-i18n="heroCard3Small">
+            fragilità climatica normalizzata per area statistica
+          </small>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABS -->
+    <section>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-csi">
+          <span class="dot"></span>
+          <span data-i18n="tabCSI">Rifugi climatici (CSI)</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-cfi">
+          <span class="dot"></span>
+          <span data-i18n="tabCFI">Fragilità & accesso ai rifugi</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- BOTTONE CONFRONTO FULLSCREEN -->
+    <section class="compare-bar">
+      <button id="open-compare" class="map-toggle-btn">
+        Confronta CSI / CFI (mappa fullscreen)
+      </button>
+    </section>
+
+    <!-- TAB CSI (AREE STATISTICHE) -->
+    <section id="tab-csi" class="tab-panel active">
+      <h2 class="section-title" data-i18n="csiSectionTitle">
+        Dove sono e come funzionano i rifugi climatici
+      </h2>
+      <p class="section-subtitle" data-i18n="csiSectionSubtitle">
+        Non tutti i parchi sono rifugi climatici: qui vediamo qualità (CSI), dotazioni e accessibilità dei green spaces bolognesi.
+      </p>
+
+      <div class="two-columns">
+        <div class="card">
+          <div class="filters" id="csi-filters">
+            <div class="chip active" data-class="all" data-i18n="chipAll">Tutti</div>
+            <div class="chip" data-class="very_low" data-i18n="chipVeryLow">CSI molto basso</div>
+            <div class="chip" data-class="low" data-i18n="chipLow">CSI basso</div>
+            <div class="chip" data-class="medium" data-i18n="chipMedium">CSI medio</div>
+            <div class="chip" data-class="high" data-i18n="chipHigh">CSI alto</div>
+            <div class="chip" data-class="very_high" data-i18n="chipVeryHigh">
+              CSI molto alto
+            </div>
+          </div>
+
+          <div class="map-toolbar">
+            <button id="toggle-csi-layer" class="map-toggle-btn">
+              Nascondi layer
+            </button>
+          </div>
+
+          <div id="map-csi"></div>
+          <div class="hint" data-i18n="csiHint">
+            Suggerimento: usa i filtri per concentrarti sui parchi con migliore capacità di offrire sollievo (CSI alto/molto alto).
+          </div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="csiHistTitle">Distribuzione del Climate Shelter Index (CSI)</h3>
+          <canvas id="chart-csi-hist"></canvas>
+          <div class="hint" data-i18n="csiHistHint">
+            Quanti parchi hanno davvero un CSI elevato? L’istogramma mostra quante aree verdi rientrano in ciascuna classe di qualità climatica.
+          </div>
+          <hr />
+          <h3 data-i18n="amenitiesTitle">Composizione climatica delle aree</h3>
+          <canvas id="chart-amenities"></canvas>
+          <div class="hint" data-i18n="amenitiesHint">
+            Verde, blu, hot e cold area: valori medi percentuali per area statistica.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB CFI -->
+    <section id="tab-cfi" class="tab-panel">
+      <h2 class="section-title" data-i18n="cfiSectionTitle">
+        Fragilità climatica e sociale per quartiere
+      </h2>
+      <p class="section-subtitle" data-i18n="cfiSectionSubtitle">
+        Le aree più fragili combinano esposizione al calore, scarsa presenza di rifugi climatici e vulnerabilità socio-economica. Qui vediamo come questi fattori si intrecciano nello spazio urbano.
+      </p>
+
+      <div class="two-columns">
+        <div class="card">
+          <div class="map-toolbar">
+            <button id="toggle-cfi-layer" class="map-toggle-btn">
+              Nascondi layer
+            </button>
+          </div>
+          <div id="map-cfi"></div>
+          <div class="hint" data-i18n="cfiHint">
+            Passa il mouse sulle aree statistiche per leggere CFI (fragilità climatica), F complessivo e HF. La mappa evidenzia le zone a priorità maggiore.
+          </div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="cfiVsCsiTitle">CFI vs qualità dei rifugi (CSI medio)</h3>
+          <canvas id="chart-cfi-vs-csi"></canvas>
+          <div class="hint" data-i18n="cfiVsCsiHint">
+            Ogni punto è un’area statistica: in alto a sinistra trovi le zone con alta fragilità climatica e rifugi di bassa qualità — i candidati naturali per interventi TALEA.
+          </div>
+          <hr />
+          <h3 data-i18n="fragilityClassTitle">Classi di fragilità complessiva (F)</h3>
+          <canvas id="chart-fragility-classes"></canvas>
+          <div class="hint" data-i18n="fragilityClassHint">
+            La distribuzione per classi mostra quanto la fragilità climatica contribuisce a spostare i quartieri verso livelli di rischio più elevati.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEZIONE NUOVA: PARCHI + TABELLA CSI -->
+    <section id="parks-csi-section">
+      <h2 class="section-title">
+        Parchi e Climate Shelter Index (CSI)
+      </h2>
+      <p class="section-subtitle">
+        Qui vediamo i singoli parchi di Bologna, con intensità di verde proporzionale al loro CSI. La tabella a fianco permette di esplorare e filtrare i valori.
+      </p>
+
+      <div class="two-columns">
+        <div class="card">
+          <div class="map-toolbar">
+            <button id="toggle-csi-parks-layer" class="map-toggle-btn">
+              Nascondi layer
+            </button>
+          </div>
+          <div id="map-csi-parks"></div>
+          <div class="hint">
+            Passa il mouse sui poligoni per vedere tutti i dettagli del parco (quartiere, nome, ubicazione, NDVI, accesso, dotazioni e CSI).
+          </div>
+        </div>
+        <div class="card">
+          <h3>Elenco parchi e indicatori CSI</h3>
+          <table id="parks-table" class="display" style="width:100%">
+            <thead>
+              <tr>
+                <th>Quartiere</th>
+                <th>Nome parco</th>
+                <th>Ubicazione</th>
+                <th>Classe uso</th>
+                <th>NDVI</th>
+                <th>Accesso</th>
+                <th>CSI</th>
+                <th>Area (ha)</th>
+                <th>Fermate bus &lt; 5'</th>
+                <th>Picnic</th>
+                <th>Panchine</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="hint">
+            La tabella mostra le prime 10 righe; puoi cercare per nome, quartiere o ordinare per NDVI/CSI per identificare i parchi più efficaci come rifugi climatici.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FULLSCREEN OVERLAY: CONFRONTO CSI / CFI -->
+  <div id="fullscreen-compare" class="fullscreen-overlay">
+    <div class="fullscreen-panel">
+      <div class="fullscreen-header">
+        <div class="fullscreen-title">
+          Confronto CSI / CFI · Bologna
+        </div>
+        <button class="fullscreen-close" id="close-compare">
+          ✕
+        </button>
+      </div>
+      <div class="compare-slider-wrapper">
+        <span>Solo CSI</span>
+        <input type="range" id="compare-slider" min="0" max="1" step="0.05" value="0.5" />
+        <span>Solo CFI</span>
+      </div>
+      <div id="map-compare"></div>
+      <div class="fullscreen-footer">
+        Trascina lo slider per passare dai rifugi climatici (CSI) alla fragilità complessiva (CFI). Il layer CSI è in verde,
+        il CFI in giallo.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       1. MULTILINGUA: CARICAMENTO JSON IT / EN
+       ========================================================= */
+
+    let I18N = { it: null, en: null };
+    let currentLang = "it";
+
+    async function loadI18n() {
+      const [itResp, enResp] = await Promise.all([
+        fetch("assets/i18n/it.json"),
+        fetch("assets/i18n/en.json")
+      ]);
+      I18N.it = await itResp.json();
+      I18N.en = await enResp.json();
+    }
+
+    function applyI18n() {
+      const t = I18N[currentLang];
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        if (t[key] !== undefined) {
+          el.textContent = t[key];
+        }
+      });
+    }
+
+    function updateLanguageButtons() {
+      document.querySelectorAll(".lang-btn").forEach((btn) => {
+        btn.classList.remove("active");
+      });
+      const active = document.querySelector(`.lang-btn[data-lang='${currentLang}']`);
+      if (active) active.classList.add("active");
+    }
+
+    function initLangSwitch() {
+      document.querySelectorAll(".lang-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const lang = btn.dataset.lang;
+          if (!lang || lang === currentLang) return;
+          currentLang = lang;
+          applyI18n();
+          updateLanguageButtons();
+          updateChartsLanguage();
+        });
+      });
+    }
+
+    /* =========================================================
+       2. CONFIG PERCORSI GEOJSON + BASEMAP
+       ========================================================= */
+
+    const CSI_GEOJSON_URL = "assets/data/g_b_csi_hot_cold_lst.geojson";
+    const CFI_GEOJSON_URL = "assets/data/new_fragility_classi.geojson";
+    const CSI_PARKS_GEOJSON_URL = "assets/data/csi.geojson";
+    const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
+    /* =========================================================
+       3. VARIABILI GLOBALI MAPPE + GRAFICI
+       ========================================================= */
+
+    let csiData = null;        // CSI per aree statistiche
+    let cfiData = null;        // Fragilità per aree statistiche
+    let csiParksData = null;   // CSI per parchi
+    let mapCSI, mapCFI, mapCompare, mapCSIParks;
+    let csiHistChart, amenitiesChart, cfiVsCsiChart, fragilityClassChart;
+    let csiStats = null;
+    let fragStats = null;
+    let parksTable = null;
+
+    /* =========================================================
+       4. HELPER NUMERICO + CLASSIFICAZIONE
+       ========================================================= */
+
+    function toNum(v) {
+      if (v === null || v === undefined) return NaN;
+      if (typeof v === "string") {
+        v = v.replace(",", ".");
+      }
+      const n = Number(v);
+      return isNaN(n) ? NaN : n;
+    }
+
+    function classifyCSI(csi) {
+      if (csi < 0.2) return "very_low";
+      if (csi < 0.4) return "low";
+      if (csi < 0.6) return "medium";
+      if (csi < 0.8) return "high";
+      return "very_high";
+    }
+
+    function classifyFragility(value) {
+      if (value <= 0.25) return "very_low";
+      if (value <= 0.45) return "low";
+      if (value <= 0.6) return "moderate";
+      if (value <= 0.75) return "high";
+      return "very_high";
+    }
+
+    /* =========================================================
+       5. MAPPA CSI (AREE STATISTICHE)
+       ========================================================= */
+
+    function initMapCSI() {
+      mapCSI = new maplibregl.Map({
+        container: "map-csi",
+        style: BASEMAP_STYLE,
+        center: [11.34, 44.5],
+        zoom: 11.8,
+      });
+
+      mapCSI.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      mapCSI.on("load", () => {
+        mapCSI.addSource("csi-areas", {
+          type: "geojson",
+          data: csiData,
+        });
+
+        const csiValues = csiData.features
+          .map(f => toNum(f.properties.CSI_avg))
+          .filter(v => !isNaN(v));
+
+        const csiMin = Math.min(...csiValues);
+        const csiMax = Math.max(...csiValues);
+        const span = csiMax - csiMin || 1;
+        const q1 = csiMin + span * 0.25;
+        const q2 = csiMin + span * 0.50;
+        const q3 = csiMin + span * 0.75;
+
+        csiStats = { min: csiMin, max: csiMax, q1, q2, q3 };
+        console.log("CSI (aree) min/max:", csiMin, csiMax);
+
+        mapCSI.addLayer({
+          id: "csi-areas-fill",
+          type: "fill",
+          source: "csi-areas",
+          paint: {
+            "fill-color": [
+              "interpolate", ["linear"], ["to-number", ["get", "CSI_avg"]],
+              csiMin, "#ecfdf3",
+              q1, "#bbf7d0",
+              q2, "#86efac",
+              q3, "#22c55e",
+              csiMax, "#166534"
+            ],
+            "fill-opacity": 0.35,
+            "fill-outline-color": "#ffffff"
+          }
+        });
+
+        const popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        mapCSI.on("mousemove", "csi-areas-fill", (e) => {
+          const f = e.features[0];
+          const p = f.properties;
+          const t = I18N[currentLang];
+
+          const html = `
+            <strong>${p.area_stati || p.zona || t?.popupPark || "Area"}</strong><br/>
+            ${t?.popupCSI || "CSI"}: ${p.CSI_avg !== undefined ? toNum(p.CSI_avg).toFixed(3) : "n.d."}<br/>
+            CS: ${p.CS ?? "n.d."} (n. climate shelters)<br/>
+            green: ${p["green%"] !== undefined ? toNum(p["green%"]).toFixed(1) : "n.d."}% · 
+            blue: ${p["blue%"] !== undefined ? toNum(p["blue%"]).toFixed(1) : "n.d."}%<br/>
+            hot: ${p["hot_area%"] !== undefined ? toNum(p["hot_area%"]).toFixed(1) : "n.d."}% · 
+            cold: ${p["cold_area%"] !== undefined ? toNum(p["cold_area%"]).toFixed(1) : "n.d."}%
+          `;
+          popup.setLngLat(e.lngLat).setHTML(html).addTo(mapCSI);
+        });
+
+        mapCSI.on("mouseleave", "csi-areas-fill", () => popup.remove());
+
+        // toggle layer on/off
+        const toggleBtnCSI = document.getElementById("toggle-csi-layer");
+        let csiVisible = true;
+        if (toggleBtnCSI) {
+          toggleBtnCSI.addEventListener("click", () => {
+            csiVisible = !csiVisible;
+            mapCSI.setLayoutProperty(
+              "csi-areas-fill",
+              "visibility",
+              csiVisible ? "visible" : "none"
+            );
+            toggleBtnCSI.classList.toggle("off", !csiVisible);
+            toggleBtnCSI.textContent = csiVisible ? "Nascondi layer" : "Mostra layer";
+          });
+        }
+      });
+    }
+
+    function applyCSIFilter(cls) {
+      if (!mapCSI) return;
+      if (cls === "all") {
+        mapCSI.setFilter("csi-areas-fill", null);
+      } else {
+        mapCSI.setFilter("csi-areas-fill", ["==", ["get", "csi_class"], cls]);
+      }
+    }
+
+    function initCSIFilterUI() {
+      document
+        .querySelectorAll("#csi-filters .chip")
+        .forEach((chip) => {
+          chip.addEventListener("click", () => {
+            document
+              .querySelectorAll("#csi-filters .chip")
+              .forEach((c) => c.classList.remove("active"));
+            chip.classList.add("active");
+            applyCSIFilter(chip.dataset.class);
+          });
+        });
+    }
+
+    /* =========================================================
+       6. MAPPA CFI (AREE STATISTICHE)
+       ========================================================= */
+
+    function initMapCFI() {
+      mapCFI = new maplibregl.Map({
+        container: "map-cfi",
+        style: BASEMAP_STYLE,
+        center: [11.34, 44.5],
+        zoom: 11.4,
+      });
+
+      mapCFI.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      mapCFI.on("load", () => {
+        mapCFI.addSource("cfi-areas", {
+          type: "geojson",
+          data: cfiData,
+        });
+
+        const fVals = cfiData.features
+          .map(f => toNum(f.properties.N_frag2))
+          .filter(v => !isNaN(v));
+
+        const fMin = Math.min(...fVals);
+        const fMax = Math.max(...fVals);
+        const span = fMax - fMin || 1;
+        const fq1 = fMin + span * 0.25;
+        const fq2 = fMin + span * 0.50;
+        const fq3 = fMin + span * 0.75;
+
+        fragStats = { min: fMin, max: fMax, q1: fq1, q2: fq2, q3: fq3 };
+        console.log("Fragility min/max:", fMin, fMax);
+
+        mapCFI.addLayer({
+          id: "cfi-fill",
+          type: "fill",
+          source: "cfi-areas",
+          paint: {
+            "fill-color": [
+              "interpolate", ["linear"], ["to-number", ["get", "N_frag2"]],
+              fMin, "#fefce8",
+              fq1, "#fef3c7",
+              fq2, "#fde68a",
+              fq3, "#facc15",
+              fMax, "#ca8a04"
+            ],
+            "fill-opacity": 0.4,
+            "fill-outline-color": "#ffffff",
+          },
+        });
+
+        const popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        mapCFI.on("mousemove", "cfi-fill", (e) => {
+          const f = e.features[0];
+          const p = f.properties;
+          const t = I18N[currentLang];
+
+          const html = `
+            <strong>${p.area_stati || p.zona || t?.popupAreaStat || "Area"}</strong><br/>
+            CFI climatico (N_f_clim): ${p.N_f_clim !== undefined ? toNum(p.N_f_clim).toFixed(3) : "n.d."}<br/>
+            ${t?.popupF || "Fragilità complessiva"}: ${p.N_frag2 !== undefined ? toNum(p.N_frag2).toFixed(3) : "n.d."}<br/>
+            ${t?.popupHF || "Quota dovuta al caldo"}: ${p.N_f_clim !== undefined ? toNum(p.N_f_clim).toFixed(3) : "n.d."}
+          `;
+          popup.setLngLat(e.lngLat).setHTML(html).addTo(mapCFI);
+        });
+
+        mapCFI.on("mouseleave", "cfi-fill", () => popup.remove());
+
+        // toggle layer on/off
+        const toggleBtnCFI = document.getElementById("toggle-cfi-layer");
+        let cfiVisible = true;
+        if (toggleBtnCFI) {
+          toggleBtnCFI.addEventListener("click", () => {
+            cfiVisible = !cfiVisible;
+            mapCFI.setLayoutProperty(
+              "cfi-fill",
+              "visibility",
+              cfiVisible ? "visible" : "none"
+            );
+            toggleBtnCFI.classList.toggle("off", !cfiVisible);
+            toggleBtnCFI.textContent = cfiVisible ? "Nascondi layer" : "Mostra layer";
+          });
+        }
+      });
+    }
+
+    /* =========================================================
+       7. MAPPA CSI PARCHI (NUOVA)
+       ========================================================= */
+
+    function initMapCSIParks() {
+      mapCSIParks = new maplibregl.Map({
+        container: "map-csi-parks",
+        style: BASEMAP_STYLE,
+        center: [11.34, 44.5],
+        zoom: 11.6,
+      });
+
+      mapCSIParks.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      mapCSIParks.on("load", () => {
+        mapCSIParks.addSource("csi-parks", {
+          type: "geojson",
+          data: csiParksData,
+        });
+
+        // scala CSI per parchi
+        const values = csiParksData.features
+          .map(f => toNum(f.properties.CSI))
+          .filter(v => !isNaN(v));
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const span = max - min || 1;
+        const q1 = min + span * 0.25;
+        const q2 = min + span * 0.50;
+        const q3 = min + span * 0.75;
+        console.log("CSI (parchi) min/max:", min, max);
+
+        mapCSIParks.addLayer({
+          id: "csi-parks-fill",
+          type: "fill",
+          source: "csi-parks",
+          paint: {
+            "fill-color": [
+              "interpolate", ["linear"], ["to-number", ["get", "CSI"]],
+              min, "#ecfdf3",
+              q1, "#bbf7d0",
+              q2, "#86efac",
+              q3, "#22c55e",
+              max, "#166534"
+            ],
+            "fill-opacity": 0.55,
+            "fill-outline-color": "#064e3b"
+          }
+        });
+
+        const popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          maxWidth: "420px"
+        });
+
+        mapCSIParks.on("mousemove", "csi-parks-fill", (e) => {
+          const f = e.features[0];
+          const p = f.properties;
+
+          // tabella con tutte le proprietà
+          let rows = "";
+          Object.keys(p).forEach((k) => {
+            rows += `<tr><td style="padding:2px 4px;"><strong>${k}</strong></td><td style="padding:2px 4px;">${p[k]}</td></tr>`;
+          });
+
+          const title = p.nome || "Parco";
+          const subtitle = p.ubicazione ? ` (${p.ubicazione})` : "";
+
+          const html = `
+            <div style="font-size:0.8rem;">
+              <div><strong>${title}</strong>${subtitle}</div>
+              <div style="margin-top:4px; max-height:180px; overflow:auto;">
+                <table style="border-collapse:collapse; width:100%; font-size:0.75rem;">
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+            </div>
+          `;
+          popup.setLngLat(e.lngLat).setHTML(html).addTo(mapCSIParks);
+        });
+
+        mapCSIParks.on("mouseleave", "csi-parks-fill", () => popup.remove());
+
+        // toggle layer on/off
+        const toggleBtn = document.getElementById("toggle-csi-parks-layer");
+        let visible = true;
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", () => {
+            visible = !visible;
+            mapCSIParks.setLayoutProperty(
+              "csi-parks-fill",
+              "visibility",
+              visible ? "visible" : "none"
+            );
+            toggleBtn.classList.toggle("off", !visible);
+            toggleBtn.textContent = visible ? "Nascondi layer" : "Mostra layer";
+          });
+        }
+      });
+    }
+
+    /* =========================================================
+       8. GRAFICI (come prima)
+       ========================================================= */
+
+    function buildCSIHistoChart(features) {
       const t = I18N[currentLang];
 
-      const html = `
-        <strong>${p.name || t.popupPark}</strong><br/>
-        ${t.popupCSI}: ${p.csi !== undefined ? (+p.csi).toFixed(2) : "n.d."}<br/>
-        ${t.popupNDVI}: ${p.ndvi !== undefined ? (+p.ndvi).toFixed(2) : "n.d."}<br/>
-        ${t.popupFountains}: ${p.fountain ? "✔" : "—"} ·
-        ${t.popupBenches}: ${p.benches ? "✔" : "—"}<br/>
-        ${t.popupTables}: ${p.tables ? "✔" : "—"}
-      `;
-      popup.setLngLat(e.lngLat).setHTML(html).addTo(mapCSI);
-    });
+      const bins = {
+        very_low: 0,
+        low: 0,
+        medium: 0,
+        high: 0,
+        very_high: 0
+      };
+      features.forEach((f) => {
+        bins[f.properties.csi_class] += 1;
+      });
 
-    mapCSI.on("mouseleave", "csi-parks-layer", () => popup.remove());
-  });
-}
-
-function applyCSIFilter(cls) {
-  if (!mapCSI) return;
-  if (cls === "all") {
-    mapCSI.setFilter("csi-parks-layer", null);
-  } else {
-    mapCSI.setFilter("csi-parks-layer", ["==", ["get", "csi_class"], cls]);
-  }
-}
-
-/* =========================================================
-   6. MAPPA CFI
-   ========================================================= */
-
-function initMapCFI() {
-  mapCFI = new maplibregl.Map({
-    container: "map-cfi",
-    style: "https://demotiles.maplibre.org/style.json",
-    center: [11.34, 44.5],
-    zoom: 11.4,
-  });
-
-  mapCFI.addControl(new maplibregl.NavigationControl(), "top-right");
-
-  mapCFI.on("load", () => {
-    mapCFI.addSource("cfi-areas", {
-      type: "geojson",
-      data: cfiData,
-    });
-
-    mapCFI.addLayer({
-      id: "cfi-fill",
-      type: "fill",
-      source: "cfi-areas",
-      paint: {
-        "fill-color": [
-          "step",
-          ["get", "CFI"],
-          "#edf8fb",
-          0.25,
-          "#b2e2e2",
-          0.45,
-          "#66c2a4",
-          0.6,
-          "#2ca25f",
-          0.75,
-          "#006d2c",
-        ],
-        "fill-opacity": 0.8,
-        "fill-outline-color": "#ffffff",
-      },
-    });
-
-    const popup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-    });
-
-    mapCFI.on("mousemove", "cfi-fill", (e) => {
-      const f = e.features[0];
-      const p = f.properties;
-      const t = I18N[currentLang];
-
-      const html = `
-        <strong>${p.name || t.popupAreaStat}</strong><br/>
-        CFI: ${p.CFI !== undefined ? (+p.CFI).toFixed(2) : "n.d."}<br/>
-        ${t.popupF}: ${p.F !== undefined ? (+p.F).toFixed(2) : "n.d."}<br/>
-        ${t.popupHF}: ${p.HF !== undefined ? (+p.HF).toFixed(2) : "n.d."}
-      `;
-      popup.setLngLat(e.lngLat).setHTML(html).addTo(mapCFI);
-    });
-
-    mapCFI.on("mouseleave", "cfi-fill", () => popup.remove());
-  });
-}
-
-/* =========================================================
-   7. GRAFICI (aggiornabili a cambio lingua)
-   ========================================================= */
-
-function buildCSIHistoChart(features) {
-  const t = I18N[currentLang];
-
-  const bins = { very_low: 0, low: 0, medium: 0, high: 0, very_high: 0 };
-  features.forEach((f) => bins[f.properties.csi_class]++);
-
-  const ctx = document.getElementById("chart-csi-hist");
-  csiHistChart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: t.csiHistLabels,
-      datasets: [
-        {
-          label: "N. parchi",
-          data: [
-            bins.very_low,
-            bins.low,
-            bins.medium,
-            bins.high,
-            bins.very_high,
-          ],
-          backgroundColor: [
-            "#e5e7eb",
-            "#bae6fd",
-            "#7dd3fc",
-            "#0ea5e9",
-            "#0369a1",
-          ],
+      const ctx = document.getElementById("chart-csi-hist");
+      csiHistChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: t.csiHistLabels,
+          datasets: [{
+            label: "N. aree",
+            data: [
+              bins.very_low,
+              bins.low,
+              bins.medium,
+              bins.high,
+              bins.very_high,
+            ],
+            backgroundColor: [
+              "#e5e7eb",
+              "#bbf7d0",
+              "#86efac",
+              "#22c55e",
+              "#166534",
+            ],
+          }],
         },
-      ],
-    },
-    options: { responsive: true, plugins: { legend: { display: false } } },
-  });
-}
-
-function buildAmenitiesChart(features) {
-  const t = I18N[currentLang];
-  const total = features.length || 1;
-  const counts = { fountain: 0, benches: 0, tables: 0 };
-
-  features.forEach((f) => {
-    const p = f.properties;
-    if (p.fountain) counts.fountain++;
-    if (p.benches) counts.benches++;
-    if (p.tables) counts.tables++;
-  });
-
-  const ctx = document.getElement => p.tables).filter(f => f.properties.fountain).length.
-
-  const amenitiesChartData = {
-    labels: t.amenitiesLabels,
-    datasets: [
-      {
-        label: t.amenitiesDatasetLabel,
-        data: [
-          (counts.fountain / total) * 100,
-          (counts.benches / total) * 100,
-          (counts.tables / total) * 100,
-        ],
-        backgroundColor: ["#22c55e", "#0ea5e9", "#facc15"],
-      },
-    ],
-  };
-
-  const amenitiesChartOpts = {
-    responsive: true,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          callback: (v) => v + "%",
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } },
         },
-      },
-    },
-  };
-
-  amenitiesChart = new Chart(
-    document.getElementById("chart-amenities"),
-    { type: "bar", data: amenitiesChartData, options: amenitiesChartOpts }
-  );
-}
-
-
-/* =========================================================
-   8. GRAFICO CFI vs CSI medio
-   ========================================================= */
-
-function buildCFIvCSIChart() {
-  const t = I18N[currentLang];
-  const ctx = document.getElementById("chart-cfi-vs-csi");
-
-  const points = cfiData.features
-    .filter((f) => f.properties.CFI && f.properties.CSI_mean)
-    .map((f) => ({ x: +f.properties.CFI, y: +f.properties.CSI_mean }));
-
-  cfiVsCsiChart = new Chart(ctx, {
-    type: "scatter",
-    data: {
-      datasets: [
-        {
-          label: "Aree",
-          data: points,
-          pointRadius: 3,
-          backgroundColor: "#0ea5e9",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: {
-          title: { text: t.cfiVsCsiLabelX, display: true },
-          min: 0,
-          max: 1,
-        },
-        y: {
-          title: { text: t.cfiVsCsiLabelY, display: true },
-          min: 0,
-          max: 1,
-        },
-      },
-    },
-  });
-}
-
-/* =========================================================
-   9. GRAFICO CLASSI DI FRAGILITÀ
-   ========================================================= */
-
-function buildFragilityClassChart() {
-  const t = I18N[currentLang];
-
-  const counts = {
-    very_low: 0,
-    low: 0,
-    moderate: 0,
-    high: 0,
-    very_high: 0,
-  };
-
-  cfiData.features.forEach((f) => {
-    if (f.properties.F != null) {
-      counts[classifyFragility(+f.properties.F)]++;
+      });
     }
-  });
 
-  fragilityClassChart = new Chart(
-    document.getElementById("chart-fragility-classes"),
-    {
-      type: "bar",
-      data: {
-        labels: t.fragilityClassLabels,
-        datasets: [
-          {
+    function buildAmenitiesChart(features) {
+      const t = I18N[currentLang];
+      const total = features.length || 1;
+
+      let sumGreen = 0,
+        sumBlue = 0,
+        sumHot = 0,
+        sumCold = 0;
+      features.forEach((f) => {
+        const p = f.properties;
+        sumGreen += toNum(p["green%"]) || 0;
+        sumBlue += toNum(p["blue%"]) || 0;
+        sumHot += toNum(p["hot_area%"]) || 0;
+        sumCold += toNum(p["cold_area%"]) || 0;
+      });
+
+      const avgGreen = sumGreen / total;
+      const avgBlue = sumBlue / total;
+      const avgHot = sumHot / total;
+      const avgCold = sumCold / total;
+
+      const ctx = document.getElementById("chart-amenities");
+      amenitiesChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: t.amenitiesLabels,
+          datasets: [{
+            label: t.amenitiesDatasetLabel,
+            data: [avgGreen, avgBlue, avgHot, avgCold],
+            backgroundColor: ["#16a34a", "#0f766e", "#f97316", "#6b7280"]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: (v) => v + "%"
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function buildCFIvCSIChart() {
+      const t = I18N[currentLang];
+      const ctx = document.getElementById("chart-cfi-vs-csi");
+
+      const points = cfiData.features
+        .filter((f) => f.properties.N_f_clim != null && f.properties.CSI_avg != null)
+        .map((f) => ({
+          x: toNum(f.properties.N_f_clim),
+          y: toNum(f.properties.CSI_avg),
+        }));
+
+      cfiVsCsiChart = new Chart(ctx, {
+        type: "scatter",
+        data: {
+          datasets: [{
+            label: "Aree",
+            data: points,
+            pointRadius: 3,
+            backgroundColor: "#0b7a4b",
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              title: { text: t.cfiVsCsiLabelX, display: true },
+              min: 0,
+              max: 1,
+            },
+            y: {
+              title: { text: t.cfiVsCsiLabelY, display: true },
+              min: 0,
+              max: 1,
+            },
+          },
+        },
+      });
+    }
+
+    function buildFragilityClassChart() {
+      const t = I18N[currentLang];
+      const counts = {
+        very_low: 0,
+        low: 0,
+        moderate: 0,
+        high: 0,
+        very_high: 0,
+      };
+
+      cfiData.features.forEach((f) => {
+        const F = toNum(f.properties.N_frag2);
+        if (!isNaN(F)) {
+          counts[classifyFragility(F)]++;
+        }
+      });
+
+      const ctx = document.getElementById("chart-fragility-classes");
+      fragilityClassChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: t.fragilityClassLabels,
+          datasets: [{
             label: "Aree",
             data: [
               counts.very_low,
@@ -390,155 +1284,315 @@ function buildFragilityClassChart() {
               counts.very_high,
             ],
             backgroundColor: [
-              "#e5e7eb",
-              "#bae6fd",
-              "#7dd3fc",
-              "#0ea5e9",
-              "#0369a1",
+              "#fefce8",
+              "#fef3c7",
+              "#fde68a",
+              "#facc15",
+              "#ca8a04",
             ],
-          },
-        ],
-      },
-      options: { responsive: true, plugins: { legend: { display: false } } },
-    }
-  );
-}
-
-/* =========================================================
-   10. AGGIORNAMENTO GRAFICI QUANDO CAMBIA LA LINGUA
-   ========================================================= */
-
-function updateChartsLanguage() {
-  const t = I18N[currentLang];
-
-  if (csiHistChart) {
-    csiHistChart.data.labels = t.csiHistLabels;
-    csiHistChart.update();
-  }
-  if (amenitiesChart) {
-    amenitiesChart.data.labels = t.amenitiesLabels;
-    amenitiesChart.data.datasets[0].label = t.amenitiesDatasetLabel;
-    amenitiesChart.update();
-  }
-  if (cfiVsCsiChart) {
-    cfiVsCsiChart.options.scales.x.title.text = t.cfiVsCsiLabelX;
-    cfiVsCsiChart.options.scales.y.title.text = t.cfiVsCsiLabelY;
-    cfiVsCsiChart.update();
-  }
-  if (fragilityClassChart) {
-    fragilityClassChart.data.labels = t.fragilityClassLabels;
-    fragilityClassChart.update();
-  }
-}
-
-/* =========================================================
-   11. TABS E FILTRI
-   ========================================================= */
-
-function initTabs() {
-  const buttons = document.querySelectorAll(".tab-btn");
-  const panels = document.querySelectorAll(".tab-panel");
-
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const targetId = btn.dataset.tab;
-
-      buttons.forEach((b) => b.classList.remove("active"));
-      panels.forEach((p) => p.classList.remove("active"));
-
-      btn.classList.add("active");
-      document.getElementById(targetId).classList.add("active");
-
-      if (targetId === "tab-csi" && mapCSI) mapCSI.resize();
-      if (targetId === "tab-cfi" && mapCFI) mapCFI.resize();
-    });
-  });
-}
-
-function initCSIFilterUI() {
-  document
-    .querySelectorAll("#csi-filters .chip")
-    .forEach((chip) => {
-      chip.addEventListener("click", () => {
-        document
-          .querySelectorAll("#csi-filters .chip")
-          .forEach((c) => c.classList.remove("active"));
-        chip.classList.add("active");
-        applyCSIFilter(chip.dataset.class);
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } },
+        },
       });
-    });
-}
+    }
 
-/* =========================================================
-   12. CAMBIO LINGUA UI
-   ========================================================= */
+    function updateChartsLanguage() {
+      if (!I18N.it || !I18N.en) return;
+      const t = I18N[currentLang];
 
-function initLangSwitch() {
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const lang = btn.dataset.lang;
-      if (lang === currentLang) return;
+      if (csiHistChart) {
+        csiHistChart.data.labels = t.csiHistLabels;
+        csiHistChart.update();
+      }
+      if (amenitiesChart) {
+        amenitiesChart.data.labels = t.amenitiesLabels;
+        amenitiesChart.data.datasets[0].label = t.amenitiesDatasetLabel;
+        amenitiesChart.update();
+      }
+      if (cfiVsCsiChart) {
+        cfiVsCsiChart.options.scales.x.title.text = t.cfiVsCsiLabelX;
+        cfiVsCsiChart.options.scales.y.title.text = t.cfiVsCsiLabelY;
+        cfiVsCsiChart.update();
+      }
+      if (fragilityClassChart) {
+        fragilityClassChart.data.labels = t.fragilityClassLabels;
+        fragilityClassChart.update();
+      }
+    }
 
-      currentLang = lang;
+    /* =========================================================
+       9. FULLSCREEN CONFRONTO CSI / CFI
+       ========================================================= */
+
+    function getCSIColorExpressionForCompare() {
+      if (!csiStats) {
+        return [
+          "interpolate", ["linear"], ["to-number", ["get", "CSI_avg"]],
+          0.0, "#ecfdf3",
+          0.25, "#bbf7d0",
+          0.5, "#86efac",
+          0.75, "#22c55e",
+          1.0, "#166534"
+        ];
+      }
+      const { min, max, q1, q2, q3 } = csiStats;
+      return [
+        "interpolate", ["linear"], ["to-number", ["get", "CSI_avg"]],
+        min, "#ecfdf3",
+        q1, "#bbf7d0",
+        q2, "#86efac",
+        q3, "#22c55e",
+        max, "#166534"
+      ];
+    }
+
+    function getFragColorExpressionForCompare() {
+      if (!fragStats) {
+        return [
+          "interpolate", ["linear"], ["to-number", ["get", "N_frag2"]],
+          0.0, "#fefce8",
+          0.25, "#fef3c7",
+          0.5, "#fde68a",
+          0.75, "#facc15",
+          1.0, "#ca8a04"
+        ];
+      }
+      const { min, max, q1, q2, q3 } = fragStats;
+      return [
+        "interpolate", ["linear"], ["to-number", ["get", "N_frag2"]],
+        min, "#fefce8",
+        q1, "#fef3c7",
+        q2, "#fde68a",
+        q3, "#facc15",
+        max, "#ca8a04"
+      ];
+    }
+
+    function initCompareMap() {
+      mapCompare = new maplibregl.Map({
+        container: "map-compare",
+        style: BASEMAP_STYLE,
+        center: [11.34, 44.5],
+        zoom: 11.5,
+      });
+
+      mapCompare.addControl(new maplibregl.NavigationControl(), "top-right");
+
+      mapCompare.on("load", () => {
+        mapCompare.addSource("csi-areas-full", {
+          type: "geojson",
+          data: csiData,
+        });
+        mapCompare.addSource("cfi-areas-full", {
+          type: "geojson",
+          data: cfiData,
+        });
+
+        mapCompare.addLayer({
+          id: "csi-areas-full-fill",
+          type: "fill",
+          source: "csi-areas-full",
+          paint: {
+            "fill-color": getCSIColorExpressionForCompare(),
+            "fill-opacity": 0.5,
+            "fill-outline-color": "#0f172a"
+          }
+        });
+
+        mapCompare.addLayer({
+          id: "cfi-areas-full-fill",
+          type: "fill",
+          source: "cfi-areas-full",
+          paint: {
+            "fill-color": getFragColorExpressionForCompare(),
+            "fill-opacity": 0.5,
+            "fill-outline-color": "#020617"
+          }
+        });
+
+        const slider = document.getElementById("compare-slider");
+        const updateOpacity = () => {
+          const v = parseFloat(slider.value);
+          const cfiOpacity = v;
+          const csiOpacity = 1 - v;
+          mapCompare.setPaintProperty("csi-areas-full-fill", "fill-opacity", csiOpacity * 0.8);
+          mapCompare.setPaintProperty("cfi-areas-full-fill", "fill-opacity", cfiOpacity * 0.8);
+        };
+
+        slider.addEventListener("input", updateOpacity);
+        updateOpacity();
+
+        const popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        mapCompare.on("mousemove", "cfi-areas-full-fill", (e) => {
+          const f = e.features[0];
+          const p = f.properties;
+          const html = `
+            <strong>${p.area_stati || p.zona || "Area"}</strong><br/>
+            CSI medio: ${p.CSI_avg !== undefined ? toNum(p.CSI_avg).toFixed(3) : "n.d."}<br/>
+            N_frag2 (F complessiva): ${p.N_frag2 !== undefined ? toNum(p.N_frag2).toFixed(3) : "n.d."}<br/>
+            N_f_clim (CFI): ${p.N_f_clim !== undefined ? toNum(p.N_f_clim).toFixed(3) : "n.d."}
+          `;
+          popup.setLngLat(e.lngLat).setHTML(html).addTo(mapCompare);
+        });
+        mapCompare.on("mouseleave", "cfi-areas-full-fill", () => popup.remove());
+      });
+    }
+
+    function openFullscreenCompare() {
+      const overlay = document.getElementById("fullscreen-compare");
+      overlay.classList.add("active");
+      if (!mapCompare) {
+        initCompareMap();
+      } else {
+        setTimeout(() => mapCompare.resize(), 200);
+      }
+    }
+
+    function closeFullscreenCompare() {
+      const overlay = document.getElementById("fullscreen-compare");
+      overlay.classList.remove("active");
+    }
+
+    function initCompareUI() {
+      const openBtn = document.getElementById("open-compare");
+      const closeBtn = document.getElementById("close-compare");
+      if (openBtn) openBtn.addEventListener("click", openFullscreenCompare);
+      if (closeBtn) closeBtn.addEventListener("click", closeFullscreenCompare);
+    }
+
+    /* =========================================================
+       10. TABS
+       ========================================================= */
+
+    function initTabs() {
+      const buttons = document.querySelectorAll(".tab-btn");
+      const panels = document.querySelectorAll(".tab-panel");
+
+      buttons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const targetId = btn.dataset.tab;
+          buttons.forEach((b) => b.classList.remove("active"));
+          panels.forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById(targetId).classList.add("active");
+
+          if (targetId === "tab-csi" && mapCSI) mapCSI.resize();
+          if (targetId === "tab-cfi" && mapCFI) mapCFI.resize();
+        });
+      });
+    }
+
+    /* =========================================================
+       11. TABELLA PARCHI (DataTables)
+       ========================================================= */
+
+    function buildParksTable() {
+      const rows = csiParksData.features.map((f) => {
+        const p = f.properties;
+        return [
+          p.quart || "",
+          p.nome || "",
+          p.ubicazione || "",
+          p.classe_uni || "",
+          isNaN(toNum(p.NDVI)) ? "" : toNum(p.NDVI).toFixed(3),
+          isNaN(toNum(p.access_ind)) ? "" : toNum(p.access_ind).toFixed(3),
+          isNaN(toNum(p.CSI)) ? "" : toNum(p.CSI).toFixed(3),
+          isNaN(toNum(p.area_Ha)) ? "" : toNum(p.area_Ha).toFixed(3),
+          p.busstop5 ?? "",
+          p.picnic_tab ?? "",
+          p.benches ?? ""
+        ];
+      });
+
+      parksTable = $('#parks-table').DataTable({
+        data: rows,
+        pageLength: 10,
+        lengthChange: false,
+        ordering: true,
+        searching: true,
+        columns: [
+          { title: "Quartiere" },
+          { title: "Nome parco" },
+          { title: "Ubicazione" },
+          { title: "Classe uso" },
+          { title: "NDVI" },
+          { title: "Accesso" },
+          { title: "CSI" },
+          { title: "Area (ha)" },
+          { title: "Fermate bus < 5'" },
+          { title: "Picnic" },
+          { title: "Panchine" }
+        ]
+      });
+    }
+
+    /* =========================================================
+       12. AVVIO DELLA PAGINA
+       ========================================================= */
+
+    async function initPage() {
+      await loadI18n();
+
+      // carica dati geospaziali (aree + fragilità + parchi)
+      const [csiResp, cfiResp, csiParksResp] = await Promise.all([
+        fetch(CSI_GEOJSON_URL),
+        fetch(CFI_GEOJSON_URL),
+        fetch(CSI_PARKS_GEOJSON_URL)
+      ]);
+      csiData = await csiResp.json();
+      cfiData = await cfiResp.json();
+      csiParksData = await csiParksResp.json();
+
+      // classi CSI (da CSI_avg) per aree statistiche
+      csiData.features.forEach((f) => {
+        f.properties.csi_class = classifyCSI(toNum(f.properties.CSI_avg));
+      });
+
+      // numeri hero basati su dataset parchi
+      document.getElementById("stat-total-parks").textContent =
+        csiParksData.features.length;
+
+      const eligible = csiParksData.features.filter(
+        (f) => (toNum(f.properties.CSI) || 0) > 0
+      );
+      document.getElementById("stat-csi-eligible").textContent = eligible.length;
+
+      // UI di base
+      initLangSwitch();
+      initTabs();
+      initCSIFilterUI();
+      initCompareUI();
+
+      // mappe
+      initMapCSI();
+      initMapCFI();
+      initMapCSIParks();
+
+      // grafici
+      buildCSIHistoChart(csiData.features);
+      buildAmenitiesChart(csiData.features);
+      buildCFIvCSIChart();
+      buildFragilityClassChart();
+
+      // tabella parchi
+      buildParksTable();
+
+      // lingua iniziale
       applyI18n();
       updateLanguageButtons();
       updateChartsLanguage();
-    });
-  });
-}
+    }
 
-/* =========================================================
-   13. AVVIO DELLA PAGINA
-   ========================================================= */
+    initPage().catch(console.error);
+  </script>
+</body>
 
-async function loadData() {
-  // Carica JSON multilingua
-  await loadI18n();
-
-  // Carica dati delle mappe
-  const [csiResp, cfiResp] = await Promise.all([
-    fetch(CSI_GEOJSON_URL),
-    fetch(CFI_GEOJSON_URL)
-  ]);
-
-  csiData = await csiResp.json();
-  cfiData = await cfiResp.json();
-
-  // Classi CSI
-  csiData.features.forEach((f) => {
-    f.properties.csi_class = classifyCSI(+f.properties.csi);
-  });
-
-  // Aggiorna numeri hero
-  document.getElementById("stat-total-parks").textContent =
-    csiData.features.length;
-
-  const eligible = csiData.features.filter(
-    (f) => f.properties.eligible == 1 || f.properties.candidate == 1
-  );
-  document.getElementById("stat-csi-eligible").textContent =
-    eligible.length || 181;
-
-  // Inizializza UI
-  initLangSwitch();
-  initCSIFilterUI();
-  initTabs();
-
-  // Inizializza mappe
-  initMapCSI();
-  initMapCFI();
-
-  // Inizializza grafici
-  buildCSIHistoChart(csiData.features);
-  buildAmenitiesChart(eligible.length ? eligible : csiData.features);
-  buildCFIvCSIChart();
-  buildFragilityClassChart();
-
-  // Applica lingua IT iniziale
-  applyI18n();
-  updateLanguageButtons();
-}
-
-loadData().catch(console.error);
-</script>
-
+</html>
