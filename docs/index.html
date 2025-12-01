@@ -978,43 +978,104 @@
         <h2 data-i18n="infoModalTitle">Cosa vedi in questa pagina</h2>
         <button class="modal-close" id="close-info-modal">✕</button>
       </div>
-      <div class="modal-body">
-        <p data-i18n="infoModalIntro">
-          Questa pagina usa i dati del progetto TALEA per raccontare, con mappe e grafici interattivi, come i rifugi
-          climatici e la fragilità urbana si distribuiscono nello spazio di Bologna.
-        </p>
-        <p data-i18n="infoModalSection1">
-          Nella prima sezione trovi i parchi, con il loro Climate Shelter Index (CSI) e alcuni indicatori chiave:
-          vegetazione (NDVI), accessibilità, servizi e superficie. La mappa e la tabella lavorano insieme: selezionando
-          un parco, la mappa si centra sull’area corrispondente.
-        </p>
-        <p data-i18n="infoModalSection2">
-          La scheda “Rifugi climatici (CSI)” mostra come la qualità dei rifugi cambia tra le diverse aree statistiche,
-          sia in forma cartografica sia come distribuzione numerica. L’istogramma aiuta a capire se i rifugi di qualità
-          sono concentrati o diffusi.
-        </p>
-        <p data-i18n="infoModalSection3">
-          La scheda “Fragilità & accesso ai rifugi” integra indicatori climatici e sociali: la mappa evidenzia le aree
-          più fragili, mentre i grafici mettono in relazione CFI e qualità dei rifugi. La tabella permette di
-          identificare rapidamente i quartieri prioritari.
-        </p>
-        <p data-i18n="infoModalSection4">
-          Tutte le sezioni sono pensate per supportare il Systemic Urban Observation Atlas (SUOA) di TALEA: l’obiettivo
-          non è solo mostrare dati, ma favorire decisioni informate su dove investire per migliorare l’adattamento al
-          caldo urbano.
-        </p>
-        <ul>
-          <li data-i18n="infoModalBullet1">
-            Usa le mappe per identificare pattern spaziali.
-          </li>
-          <li data-i18n="infoModalBullet2">
-            Usa le tabelle per filtrare, ordinare e cercare casi specifici.
-          </li>
-          <li data-i18n="infoModalBullet3">
-            Usa i grafici per confrontare distribuzioni e relazioni tra indicatori.
-          </li>
-        </ul>
-      </div>
+<div class="modal-body">
+  <!-- Intro generale -->
+  <p data-i18n="infoModalIntro">
+    Questa pagina usa i dati del progetto TALEA per mostrare, con mappe e grafici interattivi, come i rifugi climatici e la fragilità urbana si distribuiscono nello spazio di Bologna e come questi elementi possono guidare le scelte di adattamento.
+  </p>
+
+  <!-- Fonti dati -->
+  <h3 data-i18n="infoModalSourcesTitle">Fonti dati</h3>
+  <ul>
+    <li>
+      <strong>Temperatura superficiale e caldo estremo</strong> –
+      <span data-i18n="infoModalSourceSat">
+        dati satellitari e climatici (es. LST) per identificare le isole di calore urbane e le differenze di temperatura tra aree.
+      </span>
+    </li>
+    <li>
+      <strong>Uso/copertura del suolo</strong> –
+      <span data-i18n="infoModalSourceLulc">
+        dataset di uso del suolo e coperture (verde, acqua, superfici artificiali) per misurare la dotazione di aree verdi e blu.
+      </span>
+    </li>
+    <li>
+      <strong>Contesto socio-demografico</strong> –
+      <span data-i18n="infoModalSourceSoc">
+        indicatori socio-demografici e di vulnerabilità (densità, età, condizioni socio-economiche) a livello di area statistica.
+      </span>
+    </li>
+    <li>
+      <strong>Accessibilità e servizi</strong> –
+      <span data-i18n="infoModalSourceAccess">
+        dati su trasporto pubblico, fermate, infrastrutture e dotazioni dei parchi (panchine, aree picnic, ecc.), inclusi dati aperti e OpenStreetMap.
+      </span>
+    </li>
+  </ul>
+
+  <!-- Indicatori -->
+  <h3 data-i18n="infoModalIndicatorsTitle">Indicatori utilizzati</h3>
+  <ul>
+    <li>
+      <strong>CSI (Climate Shelter Index)</strong> –
+      <span data-i18n="infoModalCSI">
+        sintetizza quanto un singolo spazio verde funziona come rifugio climatico, combinando vegetazione, ombra, acqua e accessibilità.
+      </span>
+    </li>
+    <li>
+      <strong>CFI (N_f_clim)</strong> –
+      <span data-i18n="infoModalCFI">
+        quota della fragilità complessiva dovuta al caldo, usata per capire in che misura il rischio di un’area è guidato dalle temperature estreme.
+      </span>
+    </li>
+    <li>
+      <strong>F (N_frag2)</strong> –
+      <span data-i18n="infoModalF">
+        indice sintetico di fragilità climatica e sociale per area statistica, che combina esposizione, vulnerabilità e capacità di risposta.
+      </span>
+    </li>
+    <li>
+      <strong>Green / Blue / Hot / Cold area</strong> –
+      <span data-i18n="infoModalGBHC">
+        percentuali di superficie verde, blu e di aree particolarmente calde o mitigate, che descrivono la “composizione climatica” dei quartieri.
+      </span>
+    </li>
+    <li>
+      <strong>Accesso e servizi</strong> –
+      <span data-i18n="infoModalAccess">
+        indicatori come fermate bus entro 5 minuti, panchine, tavoli picnic e superficie (ha) che aiutano a capire se un rifugio è realmente fruibile.
+      </span>
+    </li>
+  </ul>
+
+  <!-- Come usare la dashboard -->
+  <h3 data-i18n="infoModalUsageTitle">Come usare questa pagina</h3>
+  <ul>
+    <li data-i18n="infoModalBullet1">
+      Usa le mappe per individuare pattern spaziali e quartieri critici.
+    </li>
+    <li data-i18n="infoModalBullet2">
+      Usa le tabelle per filtrare e ordinare parchi e aree in base agli indicatori chiave.
+    </li>
+    <li data-i18n="infoModalBullet3">
+      Usa i grafici per leggere distribuzioni e confrontare rapidamente CSI, CFI e fragilità complessiva.
+    </li>
+  </ul>
+
+  <!-- Riferimento al paper -->
+  <p>
+    <span data-i18n="infoModalPaperPrefix">
+      Il dettaglio metodologico sul calcolo degli indicatori è descritto in:
+    </span>
+    <br />
+    <strong><em>“Investigating Social Vulnerability to Extreme Heat: Heat Islands and Climate Shelters in Urban Contexts: The Case of Bologna”</em></strong>,
+    <span>IJGI, 2025,</span>
+    <a href="https://www.mdpi.com/2220-9964/14/1/17" target="_blank" rel="noopener noreferrer">
+      https://www.mdpi.com/2220-9964/14/1/17
+    </a>.
+  </p>
+</div>
+
     </div>
   </div>
 
@@ -2073,77 +2134,92 @@
       });
     }
 
-    function buildCFIAreasTable() {
-      const rows = cfiData.features.map((f, idx) => {
-        const p = f.properties;
-        const areaName = p.area_stati || p.zona || "";
-        const F = toNum(p.N_frag2);
-        const clsKey = classifyFragility(F);
-        let clsLabel = "";
-        if (clsKey === "very_low") clsLabel = "molto bassa";
-        else if (clsKey === "low") clsLabel = "bassa";
-        else if (clsKey === "moderate") clsLabel = "moderata";
-        else if (clsKey === "high") clsLabel = "alta";
-        else if (clsKey === "very_high") clsLabel = "molto alta";
+function buildCFIAreasTable() {
+  const rows = cfiData.features.map((f, idx) => {
+    const p = f.properties;
+    const areaName = p.area_stati || p.zona || "";
+    const F = toNum(p.N_frag2);
+    const clsKey = classifyFragility(F); // very_low, low, moderate, high, very_high
 
-        return [
-          idx,
-          areaName,
-          isNaN(toNum(p.N_f_clim)) ? "" : toNum(p.N_f_clim).toFixed(3),
-          isNaN(F) ? "" : F.toFixed(3),
-          clsLabel,
-        ];
-      });
+    return [
+      idx,                     // 0: indice feature
+      areaName,                // 1: nome area
+      isNaN(toNum(p.N_f_clim)) ? "" : toNum(p.N_f_clim).toFixed(3), // 2: CFI
+      isNaN(F) ? "" : F.toFixed(3),                                 // 3: F
+      clsKey                   // 4: chiave classe (non etichetta)
+    ];
+  });
 
-      cfiAreasTable = $("#cfi-areas-table").DataTable({
-        data: rows,
-        pageLength: 10,
-        lengthChange: false,
-        ordering: true,
-        searching: true,
-        columnDefs: [
-          {
-            targets: 0,
-            visible: false,
-            searchable: false,
-          },
-        ],
-        language: currentLang === "it" ? dtLangIt : dtLangEn,
-      });
-
-      $("#cfi-areas-table tbody").on("click", "tr", function () {
-        const data = cfiAreasTable.row(this).data();
-        if (!data) return;
-        const idx = data[0];
-        const feat = cfiData.features[idx];
-        if (!feat || !mapCFI) return;
-
-        const center = getFeatureCenter(feat);
-        mapCFI.flyTo({
-          center: [center.lng, center.lat],
-          zoom: 13,
-        });
-
-        const name = feat.properties.area_stati || feat.properties.zona || "__none__";
-        if (mapCFI.getLayer("cfi-areas-highlight")) {
-          mapCFI.setFilter("cfi-areas-highlight", [
-            "any",
-            ["==", ["get", "area_stati"], name],
-            ["==", ["get", "zona"], name],
-          ]);
+  cfiAreasTable = $("#cfi-areas-table").DataTable({
+    data: rows,
+    pageLength: 10,
+    lengthChange: false,
+    ordering: true,
+    searching: true,
+    columnDefs: [
+      {
+        targets: 0,
+        visible: false,
+        searchable: false
+      },
+      {
+        // colonna 4 = classe di fragilità
+        targets: 4,
+        render: function (data, type, row) {
+          const t = I18N[currentLang] || {};
+          // data è la chiave: very_low, low, ...
+          const key = "fragClass_" + data;
+          return t[key] || data || "";
         }
-      });
-    }
+      }
+    ],
+    language: currentLang === "it" ? dtLangIt : dtLangEn
+  });
 
-    function updateTablesLanguage() {
-      const lang = currentLang === "it" ? dtLangIt : dtLangEn;
-      if (parksTable) parksTable.settings()[0].oLanguage = lang;
-      if (csiAreasTable) csiAreasTable.settings()[0].oLanguage = lang;
-      if (cfiAreasTable) cfiAreasTable.settings()[0].oLanguage = lang;
-      if (parksTable) parksTable.draw(false);
-      if (csiAreasTable) csiAreasTable.draw(false);
-      if (cfiAreasTable) cfiAreasTable.draw(false);
+  $("#cfi-areas-table tbody").on("click", "tr", function () {
+    const data = cfiAreasTable.row(this).data();
+    if (!data) return;
+    const idx = data[0];
+    const feat = cfiData.features[idx];
+    if (!feat || !mapCFI) return;
+
+    const center = getFeatureCenter(feat);
+    mapCFI.flyTo({
+      center: [center.lng, center.lat],
+      zoom: 13
+    });
+
+    const name =
+      feat.properties.area_stati || feat.properties.zona || "__none__";
+    if (mapCFI.getLayer("cfi-areas-highlight")) {
+      mapCFI.setFilter("cfi-areas-highlight", [
+        "any",
+        ["==", ["get", "area_stati"], name],
+        ["==", ["get", "zona"], name]
+      ]);
     }
+  });
+}
+
+
+function updateTablesLanguage() {
+  const lang = currentLang === "it" ? dtLangIt : dtLangEn;
+
+  if (parksTable) {
+    parksTable.settings()[0].oLanguage = lang;
+    parksTable.draw(false);
+  }
+  if (csiAreasTable) {
+    csiAreasTable.settings()[0].oLanguage = lang;
+    csiAreasTable.draw(false);
+  }
+  if (cfiAreasTable) {
+    cfiAreasTable.settings()[0].oLanguage = lang;
+    // importante per riapplicare il render con la nuova lingua
+    cfiAreasTable.rows().invalidate().draw(false);
+  }
+}
+
 
     /* =====================
        10. Fullscreen mappa parchi (usa controllo nativo)
